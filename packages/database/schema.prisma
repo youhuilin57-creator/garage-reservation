@@ -1,0 +1,359 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────
+// 店舗（マルチテナント）
+// ─────────────────────────────────
+
+model Shop {
+  id                 String   @id @default(cuid())
+  name               String
+  address            String?
+  phone              String?
+  email              String?
+  businessHoursStart String   @default("08:00") // HH:MM
+  businessHoursEnd   String   @default("20:00") // HH:MM
+  taxRegistrationNo  String?  // インボイス登録番号
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  users             User[]
+  customers         Customer[]
+  vehicles          Vehicle[]
+  reservations      Reservation[]
+  mechanics         Mechanic[]
+  services          Service[]
+  invoices          Invoice[]
+  reservationTokens ReservationToken[]
+}
+
+// ─────────────────────────────────
+// 認証・ユーザー
+// ─────────────────────────────────
+
+enum UserRole {
+  ADMIN        // 全権限
+  RECEPTIONIST // 予約・顧客・車両CRUD
+  MECHANIC     // 自スケジュール閲覧・ステータス更新のみ
+}
+
+model User {
+  id           String   @id @default(cuid())
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id])
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(RECEPTIONIST)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mechanic      Mechanic?
+  refreshTokens RefreshToken[]
+
+  @@index([shopId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ─────────────────────────────────
+// 顧客
+// ─────────────────────────────────
+
+model Customer {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id])
+  name      String
+  kana      String?
+  phone     String?
+  email     String?
+  address   String?
+  birthday  DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  vehicles     Vehicle[]
+  reservations Reservation[]
+
+  @@index([shopId])
+  @@index([phone])
+  @@index([name])
+}
+
+// ─────────────────────────────────
+// 車両
+// ─────────────────────────────────
+
+model Vehicle {
+  id              String    @id @default(cuid())
+  shopId          String
+  shop            Shop      @relation(fields: [shopId], references: [id])
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  plateNumber     String
+  make            String
+  model           String
+  year            Int
+  vin             String?
+  color           String?
+  inspectionDate  DateTime?
+  nextServiceDate DateTime?
+  lastMileage     Int?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  reservations Reservation[]
+
+  @@index([shopId])
+  @@index([customerId])
+  @@index([plateNumber])
+  @@index([inspectionDate])
+}
+
+// ─────────────────────────────────
+// 整備メニュー
+// ─────────────────────────────────
+
+model Service {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  name        String
+  description String?
+  durationMin Int
+  basePrice   Decimal? @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reservationServices ReservationService[]
+  mechanicServices    MechanicService[]
+
+  @@index([shopId])
+}
+
+// ─────────────────────────────────
+// 予約
+// ─────────────────────────────────
+
+enum ReservationStatus {
+  RESERVED    // 予約済
+  ARRIVED     // 入庫
+  IN_PROGRESS // 整備中
+  COMPLETED   // 整備完了
+  DELIVERED   // 引渡し済
+  CANCELLED   // キャンセル
+}
+
+model Reservation {
+  id            String            @id @default(cuid())
+  shopId        String
+  shop          Shop              @relation(fields: [shopId], references: [id])
+  customerId    String
+  customer      Customer          @relation(fields: [customerId], references: [id])
+  vehicleId     String
+  vehicle       Vehicle           @relation(fields: [vehicleId], references: [id])
+  mechanicId    String?
+  mechanic      Mechanic?         @relation(fields: [mechanicId], references: [id])
+  startAt       DateTime
+  endAt         DateTime
+  status        ReservationStatus @default(RESERVED)
+  notes         String?
+  internalNotes String?
+  mileageAtService Int?
+  totalAmount   Decimal?          @db.Decimal(10, 2)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  services   ReservationService[]
+  statusLogs ReservationStatusLog[]
+  reminders  Reminder[]
+  invoice    Invoice?
+
+  @@index([shopId])
+  @@index([customerId])
+  @@index([vehicleId])
+  @@index([mechanicId])
+  @@index([startAt, endAt])
+  @@index([status])
+}
+
+model ReservationService {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  serviceId     String
+  service       Service     @relation(fields: [serviceId], references: [id])
+  price         Decimal?    @db.Decimal(10, 2)
+  notes         String?
+
+  @@index([reservationId])
+}
+
+model ReservationStatusLog {
+  id              String             @id @default(cuid())
+  reservationId   String
+  reservation     Reservation        @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  fromStatus      ReservationStatus?
+  toStatus        ReservationStatus
+  changedByUserId String?
+  notes           String?
+  createdAt       DateTime           @default(now())
+
+  @@index([reservationId])
+}
+
+// ─────────────────────────────────
+// 整備士
+// ─────────────────────────────────
+
+model Mechanic {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  color     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations     Reservation[]
+  mechanicServices MechanicService[]
+  schedules        MechanicSchedule[]
+
+  @@index([shopId])
+}
+
+model MechanicService {
+  mechanicId String
+  mechanic   Mechanic @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
+  serviceId  String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([mechanicId, serviceId])
+}
+
+model MechanicSchedule {
+  id         String   @id @default(cuid())
+  mechanicId String
+  mechanic   Mechanic @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  isHoliday  Boolean  @default(false)
+  startTime  String?
+  endTime    String?
+  notes      String?
+
+  @@unique([mechanicId, date])
+  @@index([mechanicId, date])
+}
+
+// ─────────────────────────────────
+// リマインド通知
+// ─────────────────────────────────
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Reminder {
+  id            String         @id @default(cuid())
+  reservationId String
+  reservation   Reservation    @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  status        ReminderStatus @default(PENDING)
+  scheduledAt   DateTime
+  sentAt        DateTime?
+  errorMessage  String?
+
+  @@index([scheduledAt, status])
+}
+
+// ─────────────────────────────────
+// 請求書（インボイス対応）
+// ─────────────────────────────────
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  shopId        String
+  shop          Shop          @relation(fields: [shopId], references: [id])
+  reservationId String        @unique
+  reservation   Reservation   @relation(fields: [reservationId], references: [id])
+  invoiceNumber String        @unique // INV-2026-0001 形式
+  status        InvoiceStatus @default(DRAFT)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxRate       Decimal       @db.Decimal(4, 2) @default(0.10)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  notes         String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items InvoiceItem[]
+
+  @@index([shopId])
+  @@index([invoiceNumber])
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  name        String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  amount      Decimal  @db.Decimal(10, 2)
+
+  @@index([invoiceId])
+}
+
+// ─────────────────────────────────
+// 顧客セルフ予約トークン
+// ─────────────────────────────────
+
+model ReservationToken {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  token     String   @unique @default(cuid())
+  label     String?  // 「フロント用」「ホームページ用」等
+  isActive  Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([shopId])
+  @@index([token])
+}
