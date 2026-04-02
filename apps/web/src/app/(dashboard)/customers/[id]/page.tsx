@@ -1,13 +1,12 @@
 'use client'
-import { use } from 'react'
 import { useCustomer } from '@/hooks/useCustomers'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { formatDate, formatTime, STATUS_LABELS, STATUS_BADGE_CLASS } from '@/lib/utils'
 import type { Reservation, Vehicle } from '@/types'
 
-export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function CustomerDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const { data: customer, isLoading } = useCustomer(id)
 
   const { data: reservations = [] } = useQuery({

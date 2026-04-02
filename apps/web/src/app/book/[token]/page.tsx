@@ -1,5 +1,5 @@
 'use client'
-import { use, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import type { Service } from '@/types'
 
@@ -10,8 +10,8 @@ function toDatetimeLocal(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-export default function PublicBookingPage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = use(params)
+export default function PublicBookingPage({ params }: { params: { token: string } }) {
+  const { token } = params
 
   const [shopInfo, setShopInfo] = useState<{
     shopName: string
