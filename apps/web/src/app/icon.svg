@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background: dark navy, rounded corners -->
+  <rect width="32" height="32" rx="6" fill="#1a1a2e"/>
+
+  <!-- K: left stroke + two diagonal strokes -->
+  <!-- Vertical bar -->
+  <rect x="5" y="9" width="2.5" height="14" rx="1" fill="#ffffff"/>
+  <!-- Upper diagonal (K top-right arm) -->
+  <polygon points="7.5,16 14,9 11.5,9 6.5,15" fill="#ffffff"/>
+  <!-- Lower diagonal (K bottom-right arm) -->
+  <polygon points="7.5,16 14,23 11.5,23 6.5,17" fill="#ffffff"/>
+
+  <!-- G: arc open on the right with horizontal bar -->
+  <!-- Outer arc approximated with thick path -->
+  <path
+    d="M24.5 11.5
+       A7 7 0 1 0 24.5 20.5"
+    stroke="#ffffff"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Horizontal bar of G -->
+  <rect x="20" y="15.5" width="5" height="2.2" rx="1" fill="#ffffff"/>
+</svg>
