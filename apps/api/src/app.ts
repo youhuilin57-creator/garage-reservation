@@ -34,7 +34,7 @@ export async function buildApp() {
   await app.register(registerRoutes, { prefix: '/api/v1' })
 
   // ヘルスチェック
-  app.get('/health', async () => ({ status: 'ok' }))
+  app.get('/health', async () => ({ status: 'ok', version: '1.1.0' }))
 
   return app
 }
