@@ -35,15 +35,11 @@ function generateCalendarDates(): string[] {
   return dates
 }
 
-// 週ごとに分割
+// 週ごとに分割（先頭を日曜始まりに揃えて空白パディング）
 function groupByWeek(dates: string[]): string[][] {
-  const weeks: string[][] = []
-  // 最初の週の空白埋め
-  const firstDay = parseDate(dates[0]).getDay()
-  const first: string[] = Array(firstDay).fill('')
-  dates.forEach((d) => first.length % 7 === 0 && first.length > 0 ? weeks.push([...first.splice(0)]) : null)
-
+  const firstDay = parseDate(dates[0]).getDay() // 0=日 〜 6=土
   const allDays = [...Array(firstDay).fill(''), ...dates]
+  const weeks: string[][] = []
   for (let i = 0; i < allDays.length; i += 7) {
     weeks.push(allDays.slice(i, i + 7))
   }
@@ -122,8 +118,8 @@ export default function PublicBookingPage({ params }: { params: { token: string 
     fetchSlots(date, serviceIds)
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(e?: React.FormEvent | React.MouseEvent) {
+    e?.preventDefault()
     setSubmitError('')
     setLoading(true)
     try {
@@ -532,7 +528,7 @@ export default function PublicBookingPage({ params }: { params: { token: string 
             <button
               type="button"
               disabled={loading}
-              onClick={handleSubmit as any}
+              onClick={handleSubmit}
               className="flex-1 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition"
             >
               {loading ? '送信中...' : '予約を申し込む'}
