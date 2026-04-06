@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X, Plus } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { formatCurrency } from '@/lib/utils'
 import type { Service } from '@/types'
@@ -20,6 +21,7 @@ function ServiceModal({
     description: service?.description ?? '',
     durationMin: service?.durationMin ?? 60,
     basePrice: service?.basePrice ?? '',
+    requiresApproval: service?.requiresApproval ?? false,
   })
 
   const save = useMutation({
@@ -29,6 +31,7 @@ function ServiceModal({
         description: form.description || undefined,
         durationMin: Number(form.durationMin),
         basePrice: form.basePrice ? Number(form.basePrice) : undefined,
+        requiresApproval: form.requiresApproval,
       }
       if (isEdit) {
         const { data } = await apiClient.put(`/services/${service.id}`, body)
@@ -61,7 +64,7 @@ function ServiceModal({
           <h2 className="text-lg font-semibold text-gray-900">
             {isEdit ? '整備メニュー編集' : '整備メニュー追加'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"><X className="w-4 h-4" /></button>
         </div>
 
         <form
@@ -87,6 +90,19 @@ function ServiceModal({
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
             />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.requiresApproval}
+                onChange={(e) => setForm((f) => ({ ...f, requiresApproval: e.target.checked }))}
+                className="rounded accent-blue-600"
+              />
+              <span className="text-sm font-medium text-gray-700">承認が必要なメニュー</span>
+            </label>
+            <p className="text-xs text-gray-400 mt-0.5 ml-6">オンにするとセルフ予約が「承認待ち」ステータスになります</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -167,9 +183,9 @@ export default function ServicesSettingsPage() {
         </div>
         <button
           onClick={() => setModal({ open: true })}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
         >
-          + メニュー追加
+          <Plus className="w-4 h-4" />メニュー追加
         </button>
       </div>
 

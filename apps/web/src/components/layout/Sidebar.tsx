@@ -1,15 +1,17 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { LayoutDashboard, CalendarDays, Users, Car, Wrench, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { LucideIcon } from 'lucide-react'
 
-const nav = [
-  { href: '/dashboard', label: 'ダッシュボード', icon: '📊' },
-  { href: '/reservations', label: '予約カレンダー', icon: '📅' },
-  { href: '/customers', label: '顧客管理', icon: '👥' },
-  { href: '/vehicles', label: '車両管理', icon: '🚗' },
-  { href: '/mechanics', label: '整備士', icon: '🔧' },
-  { href: '/settings', label: '設定', icon: '⚙️' },
+const nav: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/dashboard',    label: 'ダッシュボード', icon: LayoutDashboard },
+  { href: '/reservations', label: '予約カレンダー', icon: CalendarDays },
+  { href: '/customers',    label: '顧客管理',       icon: Users },
+  { href: '/vehicles',     label: '車両管理',       icon: Car },
+  { href: '/mechanics',    label: '整備士',         icon: Wrench },
+  { href: '/settings',     label: '設定',           icon: Settings },
 ]
 
 export function Sidebar() {
@@ -24,6 +26,7 @@ export function Sidebar() {
       <nav className="flex-1 p-3 space-y-0.5">
         {nav.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          const Icon = item.icon
           return (
             <Link
               key={item.href}
@@ -35,7 +38,7 @@ export function Sidebar() {
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
               )}
             >
-              <span>{item.icon}</span>
+              <Icon className="w-4 h-4 shrink-0" />
               {item.label}
             </Link>
           )

@@ -61,7 +61,7 @@ export function ReservationCalendar() {
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="timeGridDay"
+        initialView="timeGridWeek"
         locale={jaLocale}
         headerToolbar={{
           left: 'prev,next today',

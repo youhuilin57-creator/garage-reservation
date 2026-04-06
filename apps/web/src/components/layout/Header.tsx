@@ -2,6 +2,13 @@
 import { useAuthStore } from '@/stores/auth.store'
 import { apiClient } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
+import type { UserRole } from '@/types'
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: '管理者',
+  RECEPTIONIST: '受付',
+  MECHANIC: '整備士',
+}
 
 export function Header() {
   const user = useAuthStore((s) => s.user)
@@ -19,7 +26,7 @@ export function Header() {
       <div className="flex items-center gap-4">
         <div className="text-right">
           <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-          <p className="text-xs text-gray-400">{user?.role}</p>
+          <p className="text-xs text-gray-400">{user?.role ? ROLE_LABELS[user.role] : ''}</p>
         </div>
         <button
           onClick={handleLogout}

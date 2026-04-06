@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X, Plus } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { useAuthStore } from '@/stores/auth.store'
 import type { UserRole } from '@/types'
@@ -67,7 +68,7 @@ function UserModal({
           <h2 className="text-lg font-semibold text-gray-900">
             {isEdit ? 'ユーザー編集' : 'ユーザー追加'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"><X className="w-4 h-4" /></button>
         </div>
 
         <form
@@ -174,9 +175,9 @@ export default function UsersSettingsPage() {
         </div>
         <button
           onClick={() => setModal({ open: true })}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
         >
-          + ユーザー追加
+          <Plus className="w-4 h-4" />ユーザー追加
         </button>
       </div>
 

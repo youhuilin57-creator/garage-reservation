@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
 import { useReservation, useCreateReservation, useUpdateReservation, useUpdateReservationStatus, useApproveReservation, useConflictCheck } from '@/hooks/useReservations'
 import { useCustomers } from '@/hooks/useCustomers'
 import { useMechanics } from '@/hooks/useMechanics'
@@ -117,7 +118,7 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
               </span>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"><X className="w-4 h-4" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">

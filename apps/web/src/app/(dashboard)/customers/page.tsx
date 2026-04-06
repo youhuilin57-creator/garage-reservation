@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { Plus } from 'lucide-react'
 import { useCustomers } from '@/hooks/useCustomers'
 
 export default function CustomersPage() {
@@ -11,8 +12,8 @@ export default function CustomersPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">顧客管理</h1>
-        <Link href="/customers/new" className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-          + 新規顧客
+        <Link href="/customers/new" className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+          <Plus className="w-4 h-4" />新規顧客
         </Link>
       </div>
 
