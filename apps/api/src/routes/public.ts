@@ -20,6 +20,89 @@ const selfBookSchema = z.object({
 export default async function publicRoutes(app: FastifyInstance) {
   const notifSvc = new NotificationService()
 
+  // 空き枠取得
+  app.get('/book/:token/availability', async (req) => {
+    const { token } = req.params as any
+    const { date, serviceIds } = req.query as { date?: string; serviceIds?: string }
+
+    if (!date || !serviceIds) throw Errors.validation('date と serviceIds は必須です')
+
+    const rt = await app.prisma.reservationToken.findUnique({
+      where: { token },
+      include: { shop: true },
+    })
+    if (!rt || !rt.isActive) throw Errors.notFound('予約ページが見つかりません')
+
+    const shopId = rt.shopId
+    const serviceIdList = serviceIds.split(',').filter(Boolean)
+
+    // 合計作業時間（分）
+    const services = await app.prisma.service.findMany({
+      where: { id: { in: serviceIdList }, shopId, isActive: true },
+    })
+    const totalMin = services.reduce((sum, s) => sum + s.durationMin, 0)
+    if (totalMin === 0) return { data: { slots: [] } }
+
+    // 営業時間
+    const [openH, openM] = rt.shop.openTime.split(':').map(Number)
+    const [closeH, closeM] = rt.shop.closeTime.split(':').map(Number)
+
+    // 対象日の予約一覧（キャンセル・引渡し済み除く）
+    const dayStart = new Date(`${date}T00:00:00`)
+    const dayEnd = new Date(`${date}T23:59:59`)
+    const existingReservations = await app.prisma.reservation.findMany({
+      where: {
+        shopId,
+        startAt: { gte: dayStart, lte: dayEnd },
+        status: { notIn: ['CANCELLED', 'DELIVERED'] },
+      },
+      select: { mechanicId: true, startAt: true, endAt: true },
+    })
+
+    // 整備士一覧
+    const mechanics = await app.prisma.mechanic.findMany({
+      where: { shopId, isActive: true },
+      select: { id: true },
+    })
+
+    // 30分刻みでスロット生成
+    const slots: string[] = []
+    const slotMin = rt.shop.slotMin ?? 30
+    const openTotal = openH * 60 + openM
+    const closeTotal = closeH * 60 + closeM
+
+    for (let t = openTotal; t + totalMin <= closeTotal; t += slotMin) {
+      const slotH = Math.floor(t / 60)
+      const slotM = t % 60
+      const slotStart = new Date(`${date}T${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}:00`)
+      const slotEnd = new Date(slotStart.getTime() + totalMin * 60 * 1000)
+
+      // 過去スロットは除外
+      if (slotStart <= new Date()) continue
+
+      if (mechanics.length === 0) {
+        // 整備士未設定 → 時間枠内ならすべて空き
+        slots.push(`${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`)
+      } else {
+        // 少なくとも1人の整備士が空いているか確認
+        const hasAvailableMechanic = mechanics.some((mechanic) => {
+          const conflicts = existingReservations.filter(
+            (r) =>
+              r.mechanicId === mechanic.id &&
+              r.startAt < slotEnd &&
+              r.endAt > slotStart,
+          )
+          return conflicts.length === 0
+        })
+        if (hasAvailableMechanic) {
+          slots.push(`${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`)
+        }
+      }
+    }
+
+    return { data: { slots, totalMin } }
+  })
+
   // トークン検証（公開予約ページの初期表示用）
   app.get('/book/:token', async (req) => {
     const { token } = req.params as any
