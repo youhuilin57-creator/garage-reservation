@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useReservation, useCreateReservation, useUpdateReservation, useUpdateReservationStatus, useConflictCheck } from '@/hooks/useReservations'
+import { useReservation, useCreateReservation, useUpdateReservation, useUpdateReservationStatus, useApproveReservation, useConflictCheck } from '@/hooks/useReservations'
 import { useCustomers } from '@/hooks/useCustomers'
 import { useMechanics } from '@/hooks/useMechanics'
 import { apiClient } from '@/lib/api-client'
@@ -14,10 +14,12 @@ interface Props {
   onClose: () => void
 }
 
+// 通常遷移（受付・管理者操作）
 const STATUS_NEXT: Partial<Record<ReservationStatus, ReservationStatus>> = {
-  RESERVED: 'ARRIVED',
-  ARRIVED: 'IN_PROGRESS',
+  RESERVED: 'CHECKED_IN',
+  CHECKED_IN: 'IN_PROGRESS',
   IN_PROGRESS: 'COMPLETED',
+  WAITING_FOR_PARTS: 'IN_PROGRESS',
   COMPLETED: 'DELIVERED',
 }
 
@@ -30,6 +32,7 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
   const { mutate: create, isPending: creating } = useCreateReservation()
   const { mutate: update, isPending: updating } = useUpdateReservation()
   const { mutate: updateStatus } = useUpdateReservationStatus()
+  const { mutate: approve } = useApproveReservation()
 
   const [services, setServices] = useState<Service[]>([])
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
@@ -42,6 +45,7 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
   const [endAt, setEndAt] = useState(defaultEnd ? toDatetimeLocal(defaultEnd) : '')
   const [notes, setNotes] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
+  const [freeWorkNote, setFreeWorkNote] = useState('')
 
   // 整備メニュー取得
   useEffect(() => {
@@ -65,6 +69,7 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
     setEndAt(toDatetimeLocal(new Date(existing.endAt)))
     setNotes(existing.notes ?? '')
     setInternalNotes(existing.internalNotes ?? '')
+    setFreeWorkNote(existing.freeWorkNote ?? '')
   }, [existing])
 
   // 重複チェック
@@ -96,14 +101,22 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
 
   const isPending = creating || updating
   const nextStatus = existing ? STATUS_NEXT[existing.status] : undefined
+  const isPendingApproval = existing?.status === 'PENDING'
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {isEdit ? '予約詳細・編集' : '予約作成'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {isEdit ? '予約詳細・編集' : '予約作成'}
+            </h2>
+            {existing?.isWalkIn && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                飛び込み
+              </span>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
 
@@ -114,7 +127,16 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE_CLASS[existing.status]}`}>
                 {STATUS_LABELS[existing.status]}
               </span>
-              {nextStatus && (
+              {isPendingApproval && (
+                <button
+                  type="button"
+                  onClick={() => approve(reservationId!, { onSuccess: onClose })}
+                  className="ml-auto text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  承認して予約確定
+                </button>
+              )}
+              {!isPendingApproval && nextStatus && (
                 <button
                   type="button"
                   onClick={() => updateStatus({ id: reservationId!, status: nextStatus }, { onSuccess: onClose })}
@@ -155,7 +177,7 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
               <option value="">選択してください</option>
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.plateNumber} - {v.make} {v.model}（{v.year}年）
+                  {v.plateNumber} - {v.make} {v.model}{v.year ? `（${v.year}年）` : ''}
                 </option>
               ))}
             </select>
@@ -222,6 +244,9 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
                     className="rounded"
                   />
                   <span className="flex-1">{s.name}</span>
+                  {s.requiresApproval && (
+                    <span className="text-xs text-orange-600 border border-orange-200 rounded px-1">要承認</span>
+                  )}
                   <span className="text-gray-400">{s.durationMin}分</span>
                   {s.basePrice && (
                     <span className="text-gray-500">¥{s.basePrice.toLocaleString()}</span>
@@ -252,6 +277,20 @@ export function ReservationFormModal({ defaultStart, defaultEnd, reservationId, 
               placeholder="整備士向けメモ（顧客には非表示）"
             />
           </div>
+
+          {/* 自由作業メモ（編集時のみ） */}
+          {isEdit && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">作業メモ</label>
+              <textarea
+                value={freeWorkNote}
+                onChange={(e) => setFreeWorkNote(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                placeholder="整備中の自由記述メモ"
+              />
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button

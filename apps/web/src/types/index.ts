@@ -1,14 +1,18 @@
 export type UserRole = 'ADMIN' | 'RECEPTIONIST' | 'MECHANIC'
 
 export type ReservationStatus =
+  | 'PENDING'
   | 'RESERVED'
-  | 'ARRIVED'
+  | 'CHECKED_IN'
   | 'IN_PROGRESS'
+  | 'WAITING_FOR_PARTS'
   | 'COMPLETED'
   | 'DELIVERED'
   | 'CANCELLED'
 
 export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'CANCELLED'
+export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER'
+export type NextServiceType = 'SHAKEN' | 'PERIODIC' | 'OIL_CHANGE' | 'TIRE_ROTATION' | 'OTHER'
 
 export interface User {
   id: string
@@ -37,11 +41,12 @@ export interface Vehicle {
   plateNumber: string
   make: string
   model: string
-  year: number
+  modelCode?: string
+  year?: number
   color?: string
   inspectionDate?: string
-  nextServiceDate?: string
   lastMileage?: number
+  notes?: string
 }
 
 export interface Mechanic {
@@ -57,12 +62,50 @@ export interface Service {
   description?: string
   durationMin: number
   basePrice?: number
+  requiresApproval: boolean
 }
 
 export interface ReservationServiceItem {
   id: string
   service: Service
   price?: number
+}
+
+export interface ReservationPart {
+  id: string
+  reservationId: string
+  partNumber?: string
+  name: string
+  unitPrice: number
+  quantity: number
+  notes?: string
+  createdAt: string
+}
+
+export interface ServiceRecord {
+  id: string
+  reservationId: string
+  mileageAtDelivery?: number
+  workSummary?: string
+  nextRecommend?: string
+  createdByUserId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NextServiceReminder {
+  id: string
+  shopId: string
+  vehicleId: string
+  vehicle?: Vehicle & { customer?: Customer }
+  type: NextServiceType
+  title: string
+  dueDate: string
+  reminderAt: string[]
+  isSent: boolean
+  isCompleted: boolean
+  notes?: string
+  createdAt: string
 }
 
 export interface Reservation {
@@ -76,11 +119,15 @@ export interface Reservation {
   startAt: string
   endAt: string
   status: ReservationStatus
+  isWalkIn: boolean
   notes?: string
   internalNotes?: string
+  freeWorkNote?: string
   mileageAtService?: number
-  totalAmount?: number
   services: ReservationServiceItem[]
+  parts?: ReservationPart[]
+  serviceRecord?: ServiceRecord
+  invoice?: Invoice
 }
 
 export interface InvoiceItem {
@@ -95,6 +142,7 @@ export interface Invoice {
   id: string
   invoiceNumber: string
   status: InvoiceStatus
+  paymentMethod?: PaymentMethod
   issueDate: string
   subtotal: number
   taxRate: number
@@ -109,6 +157,7 @@ export interface DashboardToday {
   totalReservations: number
   byStatus: Record<ReservationStatus, number>
   inShopVehicles: number
+  pendingApprovals: number
   estimatedRevenue: number
   mechanicUtilization: {
     mechanicId: string

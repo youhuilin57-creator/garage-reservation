@@ -103,6 +103,43 @@ export function useUpdateReservationStatus() {
   })
 }
 
+export function useWalkIn() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: {
+      customerId: string
+      vehicleId: string
+      mechanicId?: string
+      serviceIds: string[]
+      notes?: string
+      internalNotes?: string
+      mileageAtService?: number
+    }) => {
+      const { data } = await apiClient.post('/reservations/walk-in', body)
+      return data.data as Reservation
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
+export function useApproveReservation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.patch(`/reservations/${id}/approve`)
+      return data.data as Reservation
+    },
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['reservations'] })
+      qc.invalidateQueries({ queryKey: ['reservation', id] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
 export function useConflictCheck(params: {
   mechanicId?: string
   startAt?: Date

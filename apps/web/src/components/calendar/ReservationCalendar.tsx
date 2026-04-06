@@ -88,7 +88,15 @@ export function ReservationCalendar() {
           const r = arg.event.extendedProps.reservation as Reservation
           return (
             <div className="text-xs p-0.5 overflow-hidden">
-              <div className="font-semibold truncate">{r.customer.name}</div>
+              <div className="font-semibold truncate flex items-center gap-1">
+                {r.isWalkIn && (
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-300 flex-shrink-0" title="飛び込み" />
+                )}
+                {r.status === 'PENDING' && (
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-300 flex-shrink-0" title="承認待ち" />
+                )}
+                {r.customer.name}
+              </div>
               <div className="truncate opacity-80">{r.vehicle.plateNumber}</div>
             </div>
           )

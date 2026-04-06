@@ -4,6 +4,7 @@ import Link from 'next/link'
 const sections = [
   { href: '/settings/services', label: '整備メニュー管理', desc: '整備メニューの追加・編集・削除' },
   { href: '/settings/users', label: 'ユーザー管理', desc: 'スタッフアカウントの管理' },
+  { href: '/settings/booking-page', label: 'セルフ予約ページ', desc: '顧客向け予約URLの発行・管理' },
 ]
 
 export default function SettingsPage() {

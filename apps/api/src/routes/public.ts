@@ -35,8 +35,8 @@ export default async function publicRoutes(app: FastifyInstance) {
         shopName: rt.shop.name,
         shopPhone: rt.shop.phone,
         businessHours: {
-          start: rt.shop.businessHoursStart,
-          end: rt.shop.businessHoursEnd,
+          start: rt.shop.openTime,
+          end: rt.shop.closeTime,
         },
         services: rt.shop.services,
       },
@@ -112,6 +112,10 @@ export default async function publicRoutes(app: FastifyInstance) {
           statusLogs: { create: { toStatus: 'RESERVED' } },
           reminders: {
             create: [{
+              type: 'BOOKING_CONFIRM' as const,
+              scheduledAt: new Date(),
+            }, {
+              type: 'REMINDER_DAY_BEFORE' as const,
               scheduledAt: new Date(body.startAt.getTime() - 24 * 60 * 60 * 1000),
             }],
           },

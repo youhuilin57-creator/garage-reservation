@@ -5,13 +5,23 @@ export const BUSINESS_HOURS = {
 
 export const ACCESS_TOKEN_TTL = '15m'
 export const REFRESH_TOKEN_TTL_DAYS = 7
-export const REMINDER_HOURS_BEFORE = 24 // 予約24時間前にリマインド
 
 export const STATUS_TRANSITIONS: Record<string, string[]> = {
-  RESERVED:    ['ARRIVED', 'CANCELLED'],
-  ARRIVED:     ['IN_PROGRESS', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED'],
-  COMPLETED:   ['DELIVERED'],
-  DELIVERED:   [],
-  CANCELLED:   [],
+  PENDING:           ['RESERVED', 'CANCELLED'],
+  RESERVED:          ['CHECKED_IN', 'CANCELLED'],
+  CHECKED_IN:        ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS:       ['WAITING_FOR_PARTS', 'COMPLETED'],
+  WAITING_FOR_PARTS: ['IN_PROGRESS', 'CANCELLED'],
+  COMPLETED:         ['DELIVERED'],
+  DELIVERED:         [],
+  CANCELLED:         [],
 }
+
+// ロール別に許可するステータス遷移
+export const MECHANIC_ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  CHECKED_IN:        ['IN_PROGRESS'],
+  IN_PROGRESS:       ['WAITING_FOR_PARTS', 'COMPLETED'],
+  WAITING_FOR_PARTS: ['IN_PROGRESS'],
+}
+
+export const SLOT_MINUTES = 30

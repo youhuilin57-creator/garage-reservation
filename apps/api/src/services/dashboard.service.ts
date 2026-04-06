@@ -45,15 +45,13 @@ export class DashboardService {
     reservations.forEach((r) => byStatus[r.status]++)
 
     const inShopVehicles = reservations.filter((r) =>
-      ([ReservationStatus.ARRIVED, ReservationStatus.IN_PROGRESS] as ReservationStatus[]).includes(r.status),
+      ([ReservationStatus.CHECKED_IN, ReservationStatus.IN_PROGRESS, ReservationStatus.WAITING_FOR_PARTS] as ReservationStatus[]).includes(r.status),
     ).length
 
     const estimatedRevenue = reservations
       .filter((r) => r.status !== ReservationStatus.CANCELLED)
       .reduce((sum, r) => {
-        const amount = r.totalAmount
-          ? Number(r.totalAmount)
-          : r.services.reduce((s, rs) => s + Number(rs.price ?? rs.service.basePrice ?? 0), 0)
+        const amount = r.services.reduce((s, rs) => s + Number(rs.price ?? rs.service.basePrice ?? 0), 0)
         return sum + amount
       }, 0)
 
