@@ -13,11 +13,12 @@ async function main() {
     create: {
       id: 'shop-demo',
       name: '山田自動車整備工場',
+      slug: 'shop-demo',
       address: '東京都渋谷区代々木1-1-1',
       phone: '03-1234-5678',
       email: 'info@yamada-garage.example.com',
-      businessHoursStart: '08:00',
-      businessHoursEnd: '20:00',
+      openTime: '08:00',
+      closeTime: '20:00',
       taxRegistrationNo: 'T0000000000001',
     },
   })
