@@ -12,6 +12,9 @@
   "dependencies": {
     "@prisma/client": "^5.12.0"
   },
+  "prisma": {
+    "seed": "ts-node seed.ts"
+  },
   "devDependencies": {
     "prisma": "^5.12.0",
     "ts-node": "^10.9.0",
