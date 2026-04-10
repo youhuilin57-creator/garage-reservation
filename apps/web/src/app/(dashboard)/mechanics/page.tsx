@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { useMechanics, useUpdateMechanicStatus, useUpdateMechanic, useDeleteMechanic } from '@/hooks/useMechanics'
+import { useMechanics, useUpdateMechanicStatus, useUpdateMechanic, useDeleteMechanic, useCreateMechanic } from '@/hooks/useMechanics'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   MECHANIC_STATUS_LABEL,
@@ -22,6 +22,7 @@ export default function MechanicsPage() {
   const { user } = useAuthStore()
   const [editing, setEditing]   = useState<Mechanic | null>(null)
   const [deleting, setDeleting] = useState<Mechanic | null>(null)
+  const [adding, setAdding]     = useState(false)
 
   const isAdmin = user?.role === 'ADMIN'
   const canEditAll = user?.role === 'ADMIN' || user?.role === 'RECEPTIONIST'
@@ -39,8 +40,18 @@ export default function MechanicsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">整備士</h1>
-        <div className="text-sm text-gray-500">
-          勤務中 {grouped.ON_DUTY.length}名 / 全{mechanics.length}名
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">
+            勤務中 {grouped.ON_DUTY.length}名 / 全{mechanics.length}名
+          </span>
+          {isAdmin && (
+            <button
+              onClick={() => setAdding(true)}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              + 整備士を追加
+            </button>
+          )}
         </div>
       </div>
 
@@ -76,12 +87,9 @@ export default function MechanicsPage() {
         </div>
       )}
 
-      {editing && (
-        <EditModal mechanic={editing} onClose={() => setEditing(null)} />
-      )}
-      {deleting && (
-        <DeleteConfirm mechanic={deleting} onClose={() => setDeleting(null)} />
-      )}
+      {adding && <AddModal onClose={() => setAdding(false)} />}
+      {editing && <EditModal mechanic={editing} onClose={() => setEditing(null)} />}
+      {deleting && <DeleteConfirm mechanic={deleting} onClose={() => setDeleting(null)} />}
     </div>
   )
 }
@@ -197,6 +205,101 @@ function TodayWorkHour({ mechanic }: { mechanic: Mechanic }) {
         ? `勤務: ${h.startTime} - ${h.endTime}`
         : '本日休み'}
     </p>
+  )
+}
+
+// ──────────────────────────────────────────
+// 追加モーダル
+// ──────────────────────────────────────────
+function AddModal({ onClose }: { onClose: () => void }) {
+  const { mutate: create, isPending } = useCreateMechanic()
+  const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError]       = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim())  { setError('名前を入力してください'); return }
+    if (!email.trim()) { setError('メールアドレスを入力してください'); return }
+    if (password.length < 8) { setError('パスワードは8文字以上で入力してください'); return }
+    setError('')
+    create(
+      { name: name.trim(), email: email.trim(), password },
+      {
+        onSuccess: onClose,
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error?.message
+          setError(msg ?? '追加に失敗しました。メールアドレスが重複している可能性があります。')
+        },
+      },
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+          <h2 className="font-semibold text-gray-900">整備士を追加</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">名前</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="山田 太郎"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="yamada@example.com"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">初期パスワード</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="8文字以上"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-xs text-gray-400">本人に伝えてログイン後に変更するよう案内してください</p>
+          </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-gray-300 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="flex-1 rounded-lg bg-blue-600 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isPending ? '追加中...' : '追加する'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 

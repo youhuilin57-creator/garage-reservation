@@ -72,6 +72,19 @@ export function useUpdateMechanic() {
   })
 }
 
+export function useCreateMechanic() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: { name: string; email: string; password: string }) => {
+      const { data } = await apiClient.post('/users', { ...body, role: 'MECHANIC' })
+      return data.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mechanics'] })
+    },
+  })
+}
+
 export function useDeleteMechanic() {
   const qc = useQueryClient()
   return useMutation({
