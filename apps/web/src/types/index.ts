@@ -80,6 +80,7 @@ export interface MechanicServiceItem {
 
 export interface Mechanic {
   id: string
+  userId: string
   name: string
   color?: string
   isActive: boolean
@@ -88,6 +89,7 @@ export interface Mechanic {
   todayActiveCount: number
   workHours: MechanicWorkHour[]
   mechanicServices: MechanicServiceItem[]
+  user?: { email: string }
 }
 
 export interface Service {
