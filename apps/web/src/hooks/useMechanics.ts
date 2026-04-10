@@ -72,6 +72,19 @@ export function useUpdateMechanic() {
   })
 }
 
+export function useDeleteMechanic() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/mechanics/${id}`)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mechanics'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
 export function useUpdateMechanicWorkHours() {
   const qc = useQueryClient()
   return useMutation({

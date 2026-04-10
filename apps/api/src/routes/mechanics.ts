@@ -70,6 +70,75 @@ export default async function mechanicRoutes(app: FastifyInstance) {
     return { data: mechanic }
   })
 
+  // 整備士情報編集（ADMIN のみ）
+  app.put('/:id', adminAuth, async (req, reply) => {
+    const { id } = req.params as any
+    const body = z.object({
+      name:             z.string().min(1).optional(),
+      color:            z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+      maxConcurrentJobs: z.number().int().min(1).max(10).optional(),
+      serviceIds:       z.array(z.string()).optional(),
+    }).parse(req.body)
+
+    const mechanic = await app.prisma.mechanic.findFirst({
+      where: { id, shopId: req.user.shopId },
+    })
+    if (!mechanic) throw Errors.notFound('整備士が見つかりません')
+
+    const updated = await app.prisma.$transaction(async (tx) => {
+      if (body.serviceIds !== undefined) {
+        await tx.mechanicService.deleteMany({ where: { mechanicId: id } })
+        if (body.serviceIds.length > 0) {
+          await tx.mechanicService.createMany({
+            data: body.serviceIds.map((sid) => ({ mechanicId: id, serviceId: sid })),
+          })
+        }
+      }
+      return tx.mechanic.update({
+        where: { id },
+        data: {
+          ...(body.name !== undefined && { name: body.name }),
+          ...(body.color !== undefined && { color: body.color }),
+          ...(body.maxConcurrentJobs !== undefined && { maxConcurrentJobs: body.maxConcurrentJobs }),
+        },
+        include: {
+          user: { select: { email: true } },
+          mechanicServices: { include: { service: true } },
+          workHours: { orderBy: { dayOfWeek: 'asc' } },
+        },
+      })
+    })
+
+    return reply.send({ data: updated })
+  })
+
+  // 整備士を無効化（ソフトデリート、ADMIN のみ）
+  app.delete('/:id', adminAuth, async (req, reply) => {
+    const { id } = req.params as any
+    const mechanic = await app.prisma.mechanic.findFirst({
+      where: { id, shopId: req.user.shopId },
+    })
+    if (!mechanic) throw Errors.notFound('整備士が見つかりません')
+
+    // 進行中の予約があれば削除不可
+    const activeReservations = await app.prisma.reservation.count({
+      where: {
+        mechanicId: id,
+        status: { in: ['CHECKED_IN', 'IN_PROGRESS', 'WAITING_FOR_PARTS'] },
+      },
+    })
+    if (activeReservations > 0) {
+      throw Errors.unprocessable('進行中の予約があるため削除できません')
+    }
+
+    await app.prisma.mechanic.update({
+      where: { id },
+      data: { isActive: false },
+    })
+
+    return reply.status(204).send()
+  })
+
   // 通常勤務時間取得
   app.get('/:id/work-hours', auth, async (req) => {
     const { id } = req.params as any
