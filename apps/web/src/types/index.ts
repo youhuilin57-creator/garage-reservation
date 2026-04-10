@@ -1,5 +1,21 @@
 export type UserRole = 'ADMIN' | 'RECEPTIONIST' | 'MECHANIC'
 
+export type MechanicStatus = 'ON_DUTY' | 'ON_BREAK' | 'ABSENT' | 'OFF'
+
+export const MECHANIC_STATUS_LABEL: Record<MechanicStatus, string> = {
+  ON_DUTY:  '勤務中',
+  ON_BREAK: '休憩中',
+  ABSENT:   '欠勤',
+  OFF:      '休日',
+}
+
+export const MECHANIC_STATUS_COLOR: Record<MechanicStatus, string> = {
+  ON_DUTY:  'bg-green-100 text-green-800',
+  ON_BREAK: 'bg-yellow-100 text-yellow-800',
+  ABSENT:   'bg-red-100 text-red-800',
+  OFF:      'bg-gray-100 text-gray-600',
+}
+
 export type ReservationStatus =
   | 'PENDING'
   | 'RESERVED'
@@ -49,11 +65,29 @@ export interface Vehicle {
   notes?: string
 }
 
+export interface MechanicWorkHour {
+  id: string
+  dayOfWeek: number
+  isWorkDay: boolean
+  startTime?: string
+  endTime?: string
+}
+
+export interface MechanicServiceItem {
+  serviceId: string
+  service: Pick<Service, 'id' | 'name'>
+}
+
 export interface Mechanic {
   id: string
   name: string
   color?: string
   isActive: boolean
+  currentStatus: MechanicStatus
+  maxConcurrentJobs: number
+  todayActiveCount: number
+  workHours: MechanicWorkHour[]
+  mechanicServices: MechanicServiceItem[]
 }
 
 export interface Service {

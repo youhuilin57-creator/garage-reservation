@@ -70,6 +70,12 @@ export class ReservationService {
     endAt: Date
     excludeId?: string
   }) {
+    const mechanic = await this.prisma.mechanic.findFirst({
+      where: { id: params.mechanicId, shopId: params.shopId },
+      select: { maxConcurrentJobs: true },
+    })
+    const maxJobs = mechanic?.maxConcurrentJobs ?? 1
+
     const conflicting = await this.prisma.reservation.findMany({
       where: {
         shopId: params.shopId,
@@ -83,7 +89,10 @@ export class ReservationService {
     })
 
     return {
-      hasConflict: conflicting.length > 0,
+      hasConflict: conflicting.length >= maxJobs,
+      overlappingCount: conflicting.length,
+      maxConcurrentJobs: maxJobs,
+      availableSlots: Math.max(0, maxJobs - conflicting.length),
       conflictingReservations: conflicting,
     }
   }

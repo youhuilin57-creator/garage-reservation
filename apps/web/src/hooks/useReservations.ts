@@ -46,6 +46,7 @@ export function useCreateReservation() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reservations'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -70,6 +71,7 @@ export function useUpdateReservation() {
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ['reservations'] })
       qc.invalidateQueries({ queryKey: ['reservation', id] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import { MechanicStatus, ReservationStatus } from '@prisma/client'
 import { Errors } from '../utils/errors'
 import { SLOT_MINUTES } from '../config/constants'
 
@@ -14,7 +15,7 @@ export default async function mechanicRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
   const adminAuth = { preHandler: [app.authenticate, app.authorize(['ADMIN'])] }
 
-  // 一覧
+  // 一覧（todayActiveCount を computed field として付与）
   app.get('/', auth, async (req) => {
     const mechanics = await app.prisma.mechanic.findMany({
       where: { shopId: req.user.shopId, isActive: true },
@@ -25,7 +26,32 @@ export default async function mechanicRoutes(app: FastifyInstance) {
       },
       orderBy: { name: 'asc' },
     })
-    return { data: mechanics }
+
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const todayEnd = new Date()
+    todayEnd.setHours(23, 59, 59, 999)
+
+    const activeCounts = await app.prisma.reservation.groupBy({
+      by: ['mechanicId'],
+      where: {
+        shopId: req.user.shopId,
+        mechanicId: { in: mechanics.map((m) => m.id) },
+        status: { in: [ReservationStatus.CHECKED_IN, ReservationStatus.IN_PROGRESS] },
+        startAt: { gte: todayStart },
+        endAt: { lte: todayEnd },
+      },
+      _count: { id: true },
+    })
+
+    const countMap = new Map(activeCounts.map((c) => [c.mechanicId, c._count.id]))
+
+    const data = mechanics.map((m) => ({
+      ...m,
+      todayActiveCount: countMap.get(m.id) ?? 0,
+    }))
+
+    return { data }
   })
 
   // 詳細
@@ -182,6 +208,32 @@ export default async function mechanicRoutes(app: FastifyInstance) {
     }
 
     return { data: { available: true, slots } }
+  })
+
+  // 稼働状況を更新（MECHANIC は自分のみ、RECEPTIONIST+ は全員）
+  app.patch('/:id/status', auth, async (req, reply) => {
+    const { id } = req.params as any
+    const { status } = z.object({
+      status: z.nativeEnum(MechanicStatus),
+    }).parse(req.body)
+
+    const mechanic = await app.prisma.mechanic.findFirst({
+      where: { id, shopId: req.user.shopId },
+    })
+    if (!mechanic) throw Errors.notFound('整備士が見つかりません')
+
+    // MECHANIC ロールは自分自身のみ変更可
+    if (req.user.role === 'MECHANIC' && mechanic.userId !== req.user.id) {
+      throw Errors.forbidden('自分の稼働状況のみ変更できます')
+    }
+
+    const updated = await app.prisma.mechanic.update({
+      where: { id },
+      data: { currentStatus: status },
+      select: { id: true, name: true, currentStatus: true, updatedAt: true },
+    })
+
+    return reply.send({ data: updated })
   })
 
   // 稼働率
